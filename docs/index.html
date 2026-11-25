@@ -3,179 +3,147 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Rocket Landing Demo</title>
-<!--
-  STARTER TEMPLATE. The example simulation below is a Monte Carlo estimate of pi.
-  It is here only to show the required structure:
-    - at least three adjustable parameters
-    - Start / Pause / Reset
-    - a live visualisation
-    - at least one quantitative output, checked against a reference value
-    - an "About / How to use" panel
-  Replace the SIMULATION section and the controls with your own model.
--->
+<title>Teaching an AI to Land a Rocket in Gusty Wind</title>
+<link rel="icon" href="data:,">
 <style>
-  :root { --ink:#1b2430; --muted:#5d6876; --line:#d8dee6; --accent:#1f6f8b; --bg:#f6f8fa; --ok:#1a7f37; --warn:#b35900; }
-  * { box-sizing: border-box; }
-  body { margin:0; font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color:var(--ink); background:var(--bg); }
-  header { padding:16px 20px; background:#fff; border-bottom:1px solid var(--line); }
-  header h1 { margin:0; font-size:1.3rem; }
-  header p { margin:4px 0 0; color:var(--muted); font-size:.95rem; }
-  main { display:grid; grid-template-columns: 300px 1fr; gap:16px; padding:16px 20px; max-width:1200px; margin:0 auto; }
-  @media (max-width: 800px) { main { grid-template-columns: 1fr; } }
-  .panel { background:#fff; border:1px solid var(--line); border-radius:8px; padding:14px; }
-  label { display:block; font-size:.9rem; margin:12px 0 4px; }
-  label span { float:right; font-variant-numeric: tabular-nums; color:var(--muted); }
-  input[type=range] { width:100%; }
-  input[type=number] { width:100%; padding:6px; border:1px solid var(--line); border-radius:4px; }
-  .buttons { display:flex; gap:8px; margin-top:16px; }
-  button { flex:1; padding:8px; border:1px solid var(--accent); background:var(--accent); color:#fff; border-radius:6px; font-size:.95rem; cursor:pointer; }
+  :root { --ink:#16202c; --muted:#5a6675; --line:#d9e0e8; --bg:#f3f6f9; --card:#fff; --accent:#1c5cab;
+          --pid:#2a78d6; --calm:#eb6834; --robust:#1baf7a; --ok:#1a7f37; --bad:#b3261e; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; color:var(--ink); background:var(--bg); }
+  header { padding:14px 20px; background:var(--card); border-bottom:1px solid var(--line); }
+  h1 { margin:0; font-size:1.25rem; } h2 { margin:0 0 8px; font-size:1rem; }
+  header p { margin:4px 0 0; color:var(--muted); font-size:.92rem; }
+  main { display:grid; grid-template-columns:290px minmax(0,1fr); gap:16px; padding:16px 20px; max-width:1280px; margin:0 auto; }
+  @media (max-width:860px) { main { grid-template-columns:minmax(0,1fr); padding:12px; } }
+  .panel { min-width:0; background:var(--card); border:1px solid var(--line); border-radius:8px; padding:14px; }
+  .stack { display:grid; grid-template-columns:minmax(0,1fr); gap:16px; align-content:start; min-width:0; }
+  label { display:block; font-size:.88rem; margin:11px 0 3px; }
+  label output { float:right; color:var(--muted); font-variant-numeric:tabular-nums; }
+  input[type=range], select, input[type=number] { width:100%; }
+  select, input[type=number] { padding:6px; border:1px solid var(--line); border-radius:5px; background:#fff; color:var(--ink); font-size:.92rem; }
+  .buttons { display:flex; gap:8px; margin-top:14px; }
+  button { flex:1; padding:9px 6px; border:1px solid var(--accent); background:var(--accent); color:#fff; border-radius:6px; font-size:.93rem; cursor:pointer; }
   button.secondary { background:#fff; color:var(--accent); }
-  canvas { width:100%; max-width:560px; aspect-ratio:1; display:block; margin:0 auto; background:#fff; border:1px solid var(--line); }
-  .stats { display:grid; grid-template-columns: repeat(auto-fit, minmax(150px,1fr)); gap:10px; margin-top:14px; }
-  .stat { border:1px solid var(--line); border-radius:6px; padding:10px; }
-  .stat .k { font-size:.8rem; color:var(--muted); }
-  .stat .v { font-size:1.2rem; font-variant-numeric: tabular-nums; }
-  .check.ok { color:var(--ok); } .check.warn { color:var(--warn); }
-  details { margin-top:16px; }
-  summary { cursor:pointer; font-weight:600; }
-  details p, details li { font-size:.92rem; line-height:1.45; }
+  button:disabled { opacity:.5; cursor:default; }
+  :focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+  canvas { width:100%; display:block; border-radius:6px; }
+  .stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(105px,1fr)); gap:8px; margin-top:10px; }
+  .stat { border:1px solid var(--line); border-radius:6px; padding:7px 9px; }
+  .stat .k { font-size:.75rem; color:var(--muted); } .stat .v { font-size:1.02rem; font-variant-numeric:tabular-nums; }
+  .ok { color:var(--ok); } .bad { color:var(--bad); }
+  #outcome { margin:10px 0 0; font-weight:600; min-height:1.4em; }
+  .scroll { overflow-x:auto; }
+  table { border-collapse:collapse; width:100%; font-size:.88rem; font-variant-numeric:tabular-nums; }
+  th, td { text-align:left; padding:6px 8px; border-bottom:1px solid var(--line); white-space:nowrap; }
+  th { color:var(--muted); font-weight:500; }
+  .dot { display:inline-block; width:10px; height:10px; border-radius:50%; margin-right:6px; }
+  .barcell { width:34%; min-width:130px; }
+  .bar { position:relative; height:14px; background:#eef2f6; border-radius:3px; }
+  .bar i { position:absolute; left:0; top:0; bottom:0; border-radius:3px; }
+  .bar b { position:absolute; top:6px; height:2px; background:#16202c; }
+  progress { width:100%; height:8px; margin-top:8px; }
+  .note { color:var(--muted); font-size:.84rem; line-height:1.45; margin:8px 0 0; }
+  .row { display:flex; gap:10px; flex-wrap:wrap; align-items:end; } .row > div { flex:0 0 130px; } .row button { flex:0 0 auto; padding:8px 14px; }
+  .row label { margin-top:0; }
+  details ol, details ul { padding-left:20px; }
+  details summary { cursor:pointer; font-weight:600; } details p, details li { font-size:.9rem; line-height:1.5; }
 </style>
 </head>
 <body>
 <header>
   <h1>Teaching an AI to Land a Rocket in Gusty Wind</h1>
-  <p>Compare a PID controller with reinforcement-learning pilots as a 2-D rocket lands on a pad in gusty wind.</p>
+  <p>Fly a 2-D rocket with a PID controller or one of two reinforcement-learning pilots, then compare how often each one lands.</p>
 </header>
-
 <main>
-  <section class="panel" aria-label="Controls">
-    <!-- REPLACE: your own parameters (at least three) -->
-    <label for="nTotal">Total samples <span id="nTotalVal"></span></label>
-    <input id="nTotal" type="range" min="1000" max="200000" step="1000" value="50000">
-
-    <label for="speed">Samples per frame (speed) <span id="speedVal"></span></label>
-    <input id="speed" type="range" min="10" max="5000" step="10" value="200">
-
-    <label for="seed">Random seed</label>
-    <input id="seed" type="number" value="42" min="1" step="1">
-
-    <div class="buttons">
-      <button id="startBtn">Start</button>
-      <button id="resetBtn" class="secondary">Reset</button>
-    </div>
-
-    <details>
-      <summary>About / How to use</summary>
-      <!-- REPLACE: explain your model, its parameters and how to read the outputs -->
-      <p>This example estimates &pi; by sampling random points in a unit square and counting the fraction that falls inside the quarter circle: &pi; &asymp; 4 &times; (inside / total).</p>
-      <ul>
-        <li>Set the parameters, then press <b>Start</b>. <b>Pause</b> stops the run; <b>Reset</b> clears it and applies new settings.</li>
-        <li>The estimate is shown with a 95% confidence interval. The error should shrink roughly as 1/&radic;N.</li>
-        <li>The check compares the estimate with the reference value; the notebook gives the same result for the default settings.</li>
-      </ul>
-    </details>
-  </section>
-
-  <section class="panel" aria-label="Simulation">
-    <canvas id="view" width="560" height="560" aria-label="Live visualisation"></canvas>
-    <div class="stats">
-      <div class="stat"><div class="k">Samples so far</div><div class="v" id="outN">0</div></div>
-      <div class="stat"><div class="k">Estimate &plusmn; 95% CI</div><div class="v" id="outEst">–</div></div>
-      <div class="stat"><div class="k">Reference value</div><div class="v" id="outRef">3.14159</div></div>
-      <div class="stat"><div class="k">Check</div><div class="v check" id="outCheck">–</div></div>
-    </div>
-  </section>
+  <div class="stack">
+    <section class="panel" aria-label="Controls">
+      <label for="ctrl">Controller</label>
+      <select id="ctrl">
+        <option value="pid">PID (classical baseline)</option>
+        <option value="calm">DQN trained in calm air</option>
+        <option value="robust">DQN with domain randomisation</option>
+      </select>
+      <label for="scenario">Conditions</label>
+      <select id="scenario">
+        <option value="unseen">Unseen wind (test)</option>
+        <option value="training">Training conditions</option>
+        <option value="calm">Calm</option>
+        <option value="custom">Custom (use the sliders)</option>
+      </select>
+      <label for="wind">Mean wind <output id="windV"></output></label>
+      <input id="wind" type="range" min="-25" max="25" step="0.5" value="12">
+      <label for="gust">Gust strength (SD) <output id="gustV"></output></label>
+      <input id="gust" type="range" min="0" max="8" step="0.25" value="4">
+      <label for="m0">Starting mass <output id="m0V"></output></label>
+      <input id="m0" type="range" min="900" max="1100" step="10" value="1000">
+      <label for="g">Gravity <output id="gV"></output></label>
+      <input id="g" type="range" min="9.3" max="10.3" step="0.01" value="9.81">
+      <label for="seed">Random seed</label>
+      <input id="seed" type="number" min="1" step="1" value="42">
+      <label for="speed">Playback speed <output id="speedV"></output></label>
+      <input id="speed" type="range" min="0.5" max="5" step="0.5" value="1">
+      <div class="buttons">
+        <button id="start">Start</button>
+        <button id="reset" class="secondary">Reset</button>
+      </div>
+      <p class="note">Moving a condition slider switches to <b>Custom</b>. Changing the conditions or seed resets the flight.</p>
+    </section>
+    <section class="panel">
+      <details id="about" open>
+        <summary>About / How to use</summary>
+        <p>The rocket must touch down slowly (vertical speed at most 2 m/s, sideways at most 1 m/s), upright (tilt at most 10°) and within 10 m of the pad centre. Its engines are on/off only.</p>
+        <ol>
+          <li>Pick a controller and conditions, then press <b>Start</b>. <b>Pause</b> holds the flight; <b>Reset</b> goes back to the beginning.</li>
+          <li>The same seed gives the same start and wind for every controller, so you can compare them fairly.</li>
+          <li>Press <b>Run batch</b> to fly many landings with all three controllers and estimate success rates with 95% confidence intervals.</li>
+        </ol>
+        <ul>
+          <li><b>Calm:</b> no wind. <b>Training:</b> wind up to 8 m/s with mass and gravity varied. <b>Unseen:</b> wind of 10–15 m/s with strong gusts, outside the training range.</li>
+          <li>Motion is integrated with fourth-order Runge–Kutta at 0.1 s; gusts follow an Ornstein–Uhlenbeck process.</li>
+          <li>The two DQN pilots are networks trained in the notebook (seed 0 of ten each). Results vary a lot between training seeds: in unseen wind the ten-seed averages are 76% (calm) and 75% (domain randomisation), against 92% for the PID.</li>
+          <li>All parameters are synthetic. Far outside the training range the DQN pilots are not reliable.</li>
+        </ul>
+      </details>
+    </section>
+  </div>
+  <div class="stack">
+    <section class="panel" aria-label="Flight">
+      <canvas id="view" width="1000" height="580" role="img" aria-label="Rocket flight: rocket, trail, landing pad and wind arrow"></canvas>
+      <div class="stats">
+        <div class="stat"><div class="k">Time</div><div class="v" id="oT"></div></div>
+        <div class="stat"><div class="k">Height</div><div class="v" id="oY"></div></div>
+        <div class="stat"><div class="k">Distance from pad</div><div class="v" id="oX"></div></div>
+        <div class="stat"><div class="k">Vertical speed</div><div class="v" id="oVy"></div></div>
+        <div class="stat"><div class="k">Sideways speed</div><div class="v" id="oVx"></div></div>
+        <div class="stat"><div class="k">Tilt</div><div class="v" id="oTh"></div></div>
+        <div class="stat"><div class="k">Fuel</div><div class="v" id="oF"></div></div>
+        <div class="stat"><div class="k">Wind now</div><div class="v" id="oW"></div></div>
+      </div>
+      <p id="outcome" aria-live="polite"></p>
+    </section>
+    <section class="panel" aria-label="Batch">
+      <h2>Success rate over many landings</h2>
+      <div class="row">
+        <div><label for="nBatch">Landings each</label>
+          <select id="nBatch"><option>100</option><option>500</option><option selected>1000</option></select></div>
+        <button id="batch">Run batch</button>
+      </div>
+      <progress id="prog" max="1" value="0" hidden></progress>
+      <div class="scroll"><table>
+        <thead><tr><th>Controller</th><th>Success</th><th>95% interval</th><th class="barcell">0–100%</th><th>Notebook</th><th>Agrees?</th></tr></thead>
+        <tbody id="rows"></tbody>
+      </table></div>
+      <p class="note" id="batchNote"></p>
+    </section>
+    <section class="panel" aria-label="Check against the notebook">
+      <h2>Check against the notebook</h2>
+      <p class="note" style="margin-top:0">Each controller flies one fixed wind-free flight when the page opens. Touchdown values must match the notebook (section 5.5) to within 0.001.</p>
+      <div class="scroll"><table><thead><tr><th>Controller</th><th>Largest difference</th><th>Result</th></tr></thead><tbody id="checks"></tbody></table></div>
+    </section>
+  </div>
 </main>
-
-<script>
-// ---------- seeded random number generator (reproducible runs) ----------
-function mulberry32(a) {
-  return function () {
-    a |= 0; a = a + 0x6D2B79F5 | 0;
-    let t = Math.imul(a ^ a >>> 15, 1 | a);
-    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
-    return ((t ^ t >>> 14) >>> 0) / 4294967296;
-  };
-}
-
-// ---------- SIMULATION (REPLACE with your own model) ----------
-const REFERENCE = Math.PI;          // analytic / notebook reference value
-const sim = { rng: null, n: 0, inside: 0, nTotal: 0 };
-
-function initSim(params) {
-  sim.rng = mulberry32(params.seed);
-  sim.n = 0; sim.inside = 0; sim.nTotal = params.nTotal;
-}
-
-function stepSim(k, draw) {                 // advance the model by k samples
-  for (let i = 0; i < k && sim.n < sim.nTotal; i++) {
-    const x = sim.rng(), y = sim.rng();
-    const hit = x * x + y * y <= 1;
-    sim.n++; if (hit) sim.inside++;
-    draw(x, y, hit);
-  }
-}
-
-function estimate() {                       // quantitative output with uncertainty
-  if (sim.n === 0) return null;
-  const p = sim.inside / sim.n;
-  const est = 4 * p;
-  const se = 4 * Math.sqrt(p * (1 - p) / sim.n);
-  return { est, ci: 1.96 * se };
-}
-
-// ---------- UI wiring (keep the pattern, adapt the details) ----------
-const $ = (id) => document.getElementById(id);
-const ctx = $("view").getContext("2d");
-let running = false, frame = null;
-
-function params() {
-  return { nTotal: +$("nTotal").value, speed: +$("speed").value, seed: Math.max(1, Math.floor(+$("seed").value) || 1) };
-}
-function showParams() {
-  $("nTotalVal").textContent = (+$("nTotal").value).toLocaleString();
-  $("speedVal").textContent = (+$("speed").value).toLocaleString();
-}
-function clearView() {
-  const w = ctx.canvas.width;
-  ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, w, w);
-  ctx.strokeStyle = "#1b2430"; ctx.lineWidth = 2;
-  ctx.beginPath(); ctx.arc(0, w, w, -Math.PI / 2, 0); ctx.stroke();
-}
-function drawPoint(x, y, hit) {
-  const w = ctx.canvas.width;
-  ctx.fillStyle = hit ? "rgba(31,111,139,0.55)" : "rgba(179,89,0,0.55)";
-  ctx.fillRect(x * w, (1 - y) * w, 1.5, 1.5);
-}
-function showOutputs() {
-  $("outN").textContent = sim.n.toLocaleString();
-  const e = estimate();
-  if (!e) { $("outEst").textContent = "–"; $("outCheck").textContent = "–"; $("outCheck").className = "v check"; return; }
-  $("outEst").textContent = `${e.est.toFixed(4)} ± ${e.ci.toFixed(4)}`;
-  const ok = Math.abs(e.est - REFERENCE) <= e.ci;
-  $("outCheck").textContent = ok ? "Within CI" : "Outside CI";
-  $("outCheck").className = "v check " + (ok ? "ok" : "warn");
-}
-function loop() {
-  stepSim(params().speed, drawPoint);
-  showOutputs();
-  if (sim.n >= sim.nTotal) { stop(); $("startBtn").textContent = "Done"; $("startBtn").disabled = true; return; }
-  frame = requestAnimationFrame(loop);
-}
-function start() { running = true; $("startBtn").textContent = "Pause"; frame = requestAnimationFrame(loop); }
-function stop() { running = false; if (frame) cancelAnimationFrame(frame); $("startBtn").textContent = "Start"; }
-function reset() {
-  stop(); initSim(params()); clearView(); showOutputs();
-  $("startBtn").disabled = false; $("startBtn").textContent = "Start";
-}
-
-$("startBtn").addEventListener("click", () => (running ? stop() : start()));
-$("resetBtn").addEventListener("click", reset);
-["nTotal", "speed"].forEach((id) => $(id).addEventListener("input", showParams));
-["nTotal", "seed"].forEach((id) => $(id).addEventListener("change", reset));
-$("outRef").textContent = REFERENCE.toFixed(5);
-showParams(); reset();
-</script>
+<script src="sim.js"></script>
+<script src="weights.js"></script>
+<script src="app.js"></script>
 </body>
 </html>

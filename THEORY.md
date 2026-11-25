@@ -155,9 +155,9 @@ $$\Phi = -\left(\frac{|x - x_{pad}|}{6} + \frac{y}{50} + \frac{|v_x|}{3}e^{-y/20
 | Replay buffer | 300 000 | Target copy every | 1000 updates |
 | $\varepsilon$ | 1.0 to 0.02 over the first 30% | Gradient norm limit | 10 |
 
-Both agents use identical settings and differ only in training scenario. The design (potential weights, $\gamma$, training length) was chosen on development seeds 100–101; the reported agents use seeds 0–4. DQN success rates swing during training, so the weights kept are those with the best success rate over 500 validation episodes on the agent's **own training scenario**, checked every 1000 batched steps. Neither unseen wind nor the test seed was used for training or selection.
+Both agents use identical settings and differ only in training scenario. The design (potential weights, $\gamma$, training length) was chosen on development seeds 100–101; the reported agents use seeds 0–9. Seeds 5–9 were added after the results of seeds 0–4 were known, to narrow the intervals; nothing else changed. DQN success rates swing during training, so the weights kept are those with the best success rate over 500 validation episodes on the agent's **own training scenario**, checked every 1000 batched steps. Neither unseen wind nor the test seed was used for training or selection.
 
-**Gravity range.** $g \in [9.78, 9.83]$ m/s² is approximately the range over the Earth's surface. An earlier set of five robust agents was trained with $g \in [9.3, 10.3]$ and tested before this range was adopted; all other settings and seeds were the same. Their mean success in unseen wind was 85.9% [70.3, 100.0], against 65.7% [43.5, 88.0] for the reported agents (95% $t$-intervals over five seeds). The intervals overlap, so five seeds do not show whether the gravity range caused the difference.
+**Gravity range.** $g \in [9.78, 9.83]$ m/s² is approximately the range over the Earth's surface. An earlier set of five robust agents was trained with $g \in [9.3, 10.3]$ and tested before this range was adopted; all other settings and seeds were the same. Their mean success in unseen wind was 85.9% [70.3, 100.0], against 65.7% [43.5, 88.0] for seeds 0–4 of the reported agents (95% $t$-intervals over five seeds). The intervals overlap, so five seeds do not show whether the gravity range caused the difference.
 
 **Domain randomisation.** At every reset of the robust agent:
 - $m_0$, $g$ and the wind parameters $(\bar w, \sigma_w)$ are drawn from the uniform ranges in the scenario table (Section 3);
@@ -215,7 +215,7 @@ The Wilson interval is used because $\hat p$ can be close to 0 or 1. All three c
 | Batch simulation | identical to one episode at a time | difference 0 | Yes |
 | Common random numbers | same seed gives the same starts and winds | identical | Yes |
 | Limiting case: zero wind, no randomisation | all controllers on identical deterministic episodes; same final states on repeat | identical; 100.0% (PID), 98.5% (calm DQN), 99.0% (robust DQN) of 200 landings | Yes |
-| Saved DQN weights | recorded validation rate reproduced to within 0.01 | all 10 agents | Yes |
+| Saved DQN weights | recorded validation rate reproduced to within 0.01 | all 20 agents | Yes |
 
 The Monte Carlo row uses a known quantity: the probability that a gust exceeds the mean by one standard deviation, $1 - \Phi(1)$.
 

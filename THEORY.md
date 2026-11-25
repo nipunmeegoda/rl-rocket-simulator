@@ -149,7 +149,26 @@ $$y = r + \gamma\,(1 - d)\,\max_{a'} Q_{\bar\phi}(\mathbf{s}', a'),$$
 - An inner loop drives the tilt error to zero with the side thrusters.
 - A vertical loop switches the main engine to track a descent-speed profile.
 
-[TODO: gains and how the continuous PID output is mapped to the discrete actions.]
+With $e_x = x_{pad} - x$ and target tilt $\theta^*$ clipped to a limit $\theta_{lim}$ (smaller below height $y_{low}$, so the rocket is upright at touchdown):
+
+$$a^* = K_p e_x + K_i\!\int\! e_x\,dt - K_d v_x, \qquad \theta^* = \mathrm{clip}\!\left(-\frac{a^*}{g},\, -\theta_{lim},\, \theta_{lim}\right), \qquad u = K_p^\theta(\theta^* - \theta) - K_d^\theta\,\omega.$$
+
+$\theta^* = -a^*/g$ is the small-angle tilt that gives the acceleration $a^*$ when the average vertical thrust balances gravity. The integral stops while $\theta^*$ is saturated (anti-windup); it is what removes the offset caused by a steady wind.
+
+Mapping to the discrete actions:
+- **Side thrusters:** $u_s = \mathrm{sign}(u)$ if $|u|$ exceeds the dead band $\delta$, otherwise 0.
+- **Main engine:** on when $v_y < -\min\!\left(\sqrt{v_{touch}^2 + 2 a_{brake}\,y},\; v_{cap}\right)$, otherwise off.
+
+| Gain | Value | Gain | Value |
+|---|---|---|---|
+| $K_p$ | 0.4 s⁻² | $K_p^\theta$ | 2.61 |
+| $K_i$ | 0.0371 s⁻³ | $K_d^\theta$ | 2.59 s |
+| $K_d$ | 1.42 s⁻¹ | $\delta$ | 0.0587 rad |
+| $\theta_{lim}$ | 0.269 rad | $v_{touch}$ | 0.861 m/s |
+| $\theta_{lim}$ below $y_{low}$ | 0.0809 rad | $a_{brake}$ | 1.0 m/s² |
+| $y_{low}$ | 20 m | $v_{cap}$ | 9.12 m/s |
+
+The gains come from a random search with local refinement (700 trials, 400 episodes each) on the domain-randomisation scenario. The best 15 were compared on 3,000 fresh episodes. Tuning never used the test seed or the unseen-wind scenario, and the controller does not see the wind, the true gravity or the dry mass. $K_p$, $y_{low}$ and $a_{brake}$ ended at the edge of their search ranges; the success rate there was already above 99.9%, so the ranges were not widened.
 
 ### Monte Carlo evaluation
 

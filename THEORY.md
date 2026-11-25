@@ -159,6 +159,8 @@ Both agents use identical settings and differ only in training scenario. The des
 
 **Gravity range.** $g \in [9.78, 9.83]$ m/s² is approximately the range over the Earth's surface. An earlier set of five robust agents was trained with $g \in [9.3, 10.3]$ and tested before this range was adopted; all other settings and seeds were the same. Their mean success in unseen wind was 85.9% [70.3, 100.0], against 65.7% [43.5, 88.0] for seeds 0–4 of the reported agents (95% $t$-intervals over five seeds). The intervals overlap, so five seeds do not show whether the gravity range caused the difference.
 
+**Randomisation-range study.** With scale $\lambda$, the training ranges become $|\bar w| \in [0, 8\lambda]$ m/s, $\sigma_w \in [0, 2\lambda]$ m/s, $m_0 \in [1000 - 100\lambda,\ 1000 + 100\lambda]$ kg and $g \in [9.81 - 0.03\lambda,\ 9.81 + 0.02\lambda]$ m/s². Scale 0 is the calm DQN and scale 1 the robust DQN; ten agents were also trained at each of $\lambda = 0.5, 1.5, 2$ with the same settings. For $\lambda > 1.25$ the training wind exceeds 10 m/s and overlaps the unseen-wind test, so those agents do not answer the question about unseen wind.
+
 **Domain randomisation.** At every reset of the robust agent:
 - $m_0$, $g$ and the wind parameters $(\bar w, \sigma_w)$ are drawn from the uniform ranges in the scenario table (Section 3);
 - the calm-trained agent always sees $\bar w = \sigma_w = 0$ and nominal $m_0$, $g$.

@@ -7,6 +7,7 @@ The notebook itself loads the saved weights and does not need this script.
     python train.py                          # all 20 agents -> models/dqn_weights_new.pt
     python train.py --compare models/dqn_weights.pt
     python train.py --agents "calm DQN" --seeds 0 1 --workers 2
+    python train.py --agents "range 0.5" "range 1.5" "range 2" --out models/dqn_range_weights.pt
     python train.py --watch --agents "calm DQN" --seeds 0      # one agent, in a live window
 """
 import argparse
@@ -102,7 +103,10 @@ class Watch(Progress):
 
 def train_one(name, seed, quiet=False, watch=False):
     ns = notebook_code()
-    scenario = {"calm DQN": ns["CALM"], "robust DQN": ns["DR_TRAIN"]}[name]
+    if name.startswith("range "):
+        scenario = ns["randomised"](float(name.split()[1]))
+    else:
+        scenario = {"calm DQN": ns["CALM"], "robust DQN": ns["DR_TRAIN"]}[name]
     t0, total = time.time(), ns["CFG"].env_steps
     progress = Watch(name, seed, total, scenario, ns) if watch else None if quiet else Progress(name, seed, total)
     state, history, val = ns["train_dqn"](scenario, seed, callback=progress)
@@ -112,7 +116,7 @@ def train_one(name, seed, quiet=False, watch=False):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--agents", nargs="+", default=["calm DQN", "robust DQN"], choices=["calm DQN", "robust DQN"])
+    ap.add_argument("--agents", nargs="+", default=["calm DQN", "robust DQN"], choices=["calm DQN", "robust DQN", "range 0.5", "range 1.5", "range 2"])
     ap.add_argument("--seeds", nargs="+", type=int, default=list(range(10)))
     ap.add_argument("--workers", type=int, default=max(1, (os.cpu_count() or 2) - 1))
     ap.add_argument("--out", type=Path, default=ROOT / "models" / "dqn_weights_new.pt")

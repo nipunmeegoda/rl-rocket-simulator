@@ -91,7 +91,7 @@ This gives gusts with standard deviation $\sigma_w$ and correlation time $\tau_w
 | $d_{\max}$ | Landing limit, distance from pad | m | 10 | assumed |
 
 **Why these values.**
-- The thrust-to-weight ratio is 1.83, and 1.59 for the heaviest rocket in the strongest gravity used in training, so the rocket can always brake.
+- The thrust-to-weight ratio is 1.83, and 1.66 for the heaviest rocket in the strongest gravity used in training, so the rocket can always brake.
 - The fuel gives 12.0 s of full thrust ($\Delta v \approx 227$ m/s). A typical descent takes about 10 s, so fuel is limited but not the dominant cause of failure.
 - The side thrusters give an angular acceleration of 0.33 rad/s².
 - A steady 15 m/s wind pushes a rocket at rest with 0.69 m/s². Balancing it needs a 4.0° lean, which is inside the landing limit; gusts add to this.
@@ -103,7 +103,8 @@ This gives gusts with standard deviation $\sigma_w$ and correlation time $\tau_w
 | Scenario | $\lvert\bar w\rvert$ (m/s) | $\sigma_w$ (m/s) | $m_0$ (kg) | $g$ (m/s²) | Use |
 |---|---|---|---|---|---|
 | Calm | 0 | 0 | 1000 | 9.81 | Trains the calm DQN; limiting case |
-| Domain randomisation | 0–8 | 0–2 | 900–1100 | 9.3–10.3 | Trains the robust DQN |
+| Domain randomisation | 0–8 | 0–2 | 900–1100 | 9.78–9.83 | Trains the robust DQN |
+| PID tuning | 0–8 | 0–2 | 900–1100 | 9.3–10.3 | Tunes the PID gains only |
 | Unseen wind | 10–15 | 3–5 | 1000 | 9.81 | Main test, all three controllers |
 
 The fuel load stays at 100 kg when $m_0$ varies, so $m_{dry}$ varies with it. Each episode starts with $w_0 \sim \mathcal N(\bar w, \sigma_w^2)$. The unseen ranges do not overlap the training ranges, and mass and gravity are nominal in the main test so that wind is the only change.
@@ -138,7 +139,25 @@ $$y = r + \gamma\,(1 - d)\,\max_{a'} Q_{\bar\phi}(\mathbf{s}', a'),$$
 
   where $\bar\phi$ is a periodically updated target network and $d = 1$ at episode end.
 - **Exploration:** $\varepsilon$-greedy, with $\varepsilon$ annealed during training.
-- **Shaped reward:** a landing bonus, a crash penalty, a per-step fuel cost and a shaping term that rewards approaching the pad slowly and upright. [TODO: exact reward terms.]
+- **Observation:** $(x/20,\; y/60-1,\; e^{-y/8},\; v_x/4,\; v_y/6,\; \theta/0.2,\; \omega/0.2,\; (m-1000)/100)$. The exponential term adds resolution near the ground. The agent does not see the wind, $g$ or $m_{dry}$.
+- **Network:** two hidden layers of 128 ReLU units and 6 linear outputs.
+- **Shaped reward:** $r = \Phi(s') - \Phi(s) - c_f\,\Delta m + B\,[\text{landed}] - C\,[\text{any failure}]$ with $c_f = 0.002$ per kg burned, $B = C = 5$ and
+
+$$\Phi = -\left(\frac{|x - x_{pad}|}{6} + \frac{y}{50} + \frac{|v_x|}{3}e^{-y/20} + \frac{|v_y - v_{ref}(y)|}{6} + |\theta| + |\omega|\right), \qquad v_{ref}(y) = -\min\!\left(\sqrt{1 + 4y},\; 12\right).$$
+
+  $\Phi$ rises as the rocket nears the pad, slows along a safe descent profile and stays upright. It is not the strict potential-based form $\gamma\Phi(s') - \Phi(s)$, so shaping may change the optimal policy.
+
+| Training setting | Value | Training setting | Value |
+|---|---|---|---|
+| Discount $\gamma$ | 0.99 | Parallel episodes | 64 |
+| Adam learning rate | $5\times10^{-4}$ falling linearly to $5\times10^{-5}$ | Batched steps | 60 000 (3.84 million transitions) |
+| Batch size | 256 | Updates per batched step | 2 |
+| Replay buffer | 300 000 | Target copy every | 1000 updates |
+| $\varepsilon$ | 1.0 to 0.02 over the first 30% | Gradient norm limit | 10 |
+
+Both agents use identical settings and differ only in training scenario. The design (potential weights, $\gamma$, training length) was chosen on development seeds 100–101; the reported agents use seeds 0–4. DQN success rates swing during training, so the weights kept are those with the best success rate over 500 validation episodes on the agent's **own training scenario**, checked every 1000 batched steps. Neither unseen wind nor the test seed was used for training or selection.
+
+**Gravity range.** $g \in [9.78, 9.83]$ m/s² is approximately the range over the Earth's surface. An earlier set of five robust agents was trained with $g \in [9.3, 10.3]$ and tested before this range was adopted; all other settings and seeds were the same. Their mean success in unseen wind was 85.9% [70.3, 100.0], against 65.7% [43.5, 88.0] for the reported agents (95% $t$-intervals over five seeds). The intervals overlap, so five seeds do not show whether the gravity range caused the difference.
 
 **Domain randomisation.** At every reset of the robust agent:
 - $m_0$, $g$ and the wind parameters $(\bar w, \sigma_w)$ are drawn from the uniform ranges in the scenario table (Section 3);
@@ -168,7 +187,7 @@ Mapping to the discrete actions:
 | $\theta_{lim}$ below $y_{low}$ | 0.0809 rad | $a_{brake}$ | 1.0 m/s² |
 | $y_{low}$ | 20 m | $v_{cap}$ | 9.12 m/s |
 
-The gains come from a random search with local refinement (700 trials, 400 episodes each) on the domain-randomisation scenario. The best 15 were compared on 3,000 fresh episodes. Tuning never used the test seed or the unseen-wind scenario, and the controller does not see the wind, the true gravity or the dry mass. $K_p$, $y_{low}$ and $a_{brake}$ ended at the edge of their search ranges; the success rate there was already above 99.9%, so the ranges were not widened.
+The gains come from a random search with local refinement (700 trials, 400 episodes each) on the PID-tuning scenario (Section 3), whose gravity range is wider than the DQN training range. The best 15 were compared on 3,000 fresh episodes. Tuning never used the test seed or the unseen-wind scenario, and the controller does not see the wind, the true gravity or the dry mass. $K_p$, $y_{low}$ and $a_{brake}$ ended at the edge of their search ranges; the success rate there was already above 99.9%, so the ranges were not widened.
 
 ### Monte Carlo evaluation
 
@@ -195,7 +214,8 @@ The Wilson interval is used because $\hat p$ can be close to 0 or 1. All three c
 | Monte Carlo error | RMS error ∝ $N^{-1/2}$ (slope −0.5) | slope −0.493 | Yes |
 | Batch simulation | identical to one episode at a time | difference 0 | Yes |
 | Common random numbers | same seed gives the same starts and winds | identical | Yes |
-| Limiting case: zero wind, no randomisation | all controllers on identical deterministic episodes | [TODO] | [TODO] |
+| Limiting case: zero wind, no randomisation | all controllers on identical deterministic episodes; same final states on repeat | identical; 100.0% (PID), 98.5% (calm DQN), 99.0% (robust DQN) of 200 landings | Yes |
+| Saved DQN weights | recorded validation rate reproduced to within 0.01 | all 10 agents | Yes |
 
 The Monte Carlo row uses a known quantity: the probability that a gust exceeds the mean by one standard deviation, $1 - \Phi(1)$.
 

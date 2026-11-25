@@ -227,8 +227,8 @@ The Monte Carlo row uses a known quantity: the probability that a gust exceeds t
 
 | Concept | Where it is used in this project |
 |---|---|
-| Reinforcement learning (DQN, experience replay, target network) | Training the landing agents (notebook section [TODO]) |
-| Domain randomisation | Randomised mass, gravity and wind at each training reset (notebook section [TODO]) |
-| Numerical ODE integration: RK4 and error order | Rocket dynamics; convergence-order check (notebook sections [TODO]) |
-| Input modelling and random variate generation | Ornstein–Uhlenbeck wind gusts; uniform randomised parameters (notebook section [TODO]) |
-| Monte Carlo estimation and the law of large numbers | Success rates with Wilson confidence intervals over 1,000 episodes (notebook section [TODO]) |
+| Reinforcement learning (DQN, experience replay, target network) | Training the landing agents (notebook sections 3.5, 3.6, 5.2–5.4) |
+| Domain randomisation | Randomised mass, gravity and wind at each training reset (notebook sections 3.1, 3.3, 5.7, 5.8) |
+| Numerical ODE integration: RK4 and error order | Rocket dynamics; convergence-order check (notebook sections 3.2, 4.1, 4.2) |
+| Input modelling and random variate generation | Ornstein–Uhlenbeck wind gusts; uniform randomised parameters (notebook sections 3.1, 3.3, 4.2) |
+| Monte Carlo estimation and the law of large numbers | Success rates with Wilson confidence intervals over 1,000 episodes (notebook sections 4.2, 5.1–5.3, 5.6–5.8) |

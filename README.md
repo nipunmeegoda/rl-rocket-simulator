@@ -14,7 +14,7 @@ This project asks one question: **does training with domain randomisation (rando
 
 ## Quick start
 
-**Notebook:** click the *Open in Colab* badge above, then *Runtime → Run all*. By default the notebook loads pre-trained weights, so a full run takes about [TODO: N] minutes on a free runtime. Set `RETRAIN = True` to train the agents from scratch.
+**Notebook:** click the *Open in Colab* badge above, then *Runtime → Run all*. By default the notebook loads pre-trained weights, so a full run takes about a minute on a laptop (Apple M1 Pro). Set `RETRAIN = True` to train the 20 main agents in the notebook (about 40 minutes), or run `train.py` to train agents in parallel.
 
 **Web demo:** open the [live demo](https://nipunmeegoda.github.io/rl-rocket-simulator/), or download this repository and double-click `docs/index.html`.
 
@@ -27,7 +27,7 @@ jupyter notebook notebook/rl-rocket-simulator.ipynb
 
 ## Using the demo
 
-Choose a controller (PID, calm-trained DQN or domain-randomised DQN), set the wind strength, gust variability and random seed, then press **Start** to watch a landing. Run a batch of episodes to estimate the success rate with its confidence interval. Full guide: [USER_GUIDE.md](USER_GUIDE.md).
+Choose a controller (PID, calm-trained DQN or domain-randomised DQN), choose the conditions (or set wind, gusts, mass and gravity yourself) and a random seed, then press **Start** to watch a landing. Run a batch of episodes to estimate the success rate with its confidence interval. Full guide: [USER_GUIDE.md](USER_GUIDE.md).
 
 ## Model and mathematics
 
@@ -46,7 +46,7 @@ The simulator is checked against closed-form results before any controller is tr
 - torque-free motion keeps $\omega$ constant, and mechanical energy is conserved when thrust and drag are off;
 - the RK4 error falls as $O(\Delta t^4)$ on a log–log plot.
 
-[TODO: state the measured results, e.g. fitted convergence slope and maximum free-fall error.]
+Measured results: the free-fall error is at most $1.1\times10^{-13}$ m, the Tsiolkovsky $\Delta v$ agrees to a relative error of $6\times10^{-14}$, energy is conserved to $1.6\times10^{-15}$ (relative), the fitted RK4 order is 4.00 (forward Euler 0.94) and the Monte Carlo error falls with slope −0.49 (theory −0.5). All checks are assertions in the notebook; the full list is in [THEORY.md](THEORY.md#5-verification).
 
 ![Verification plot](figures/verification.png)
 
@@ -56,11 +56,32 @@ This project applies reinforcement learning (Deep Q-Networks with experience rep
 
 ## Results
 
-[TODO: answer the question with the success-rate table (with 95% CIs) for the three controllers under unseen wind, and the success-rate-versus-wind-strength figure.]
+**Randomisation within the training range did not make the DQN measurably more reliable in unseen wind, and the PID controller landed most often.** The table gives landing success over 1,000 test episodes. DQN figures are means over ten training seeds with 95% intervals over seeds; PID intervals are Wilson intervals over episodes.
+
+| Test conditions | PID | DQN, calm | DQN, randomised |
+|---|---|---|---|
+| Calm | 100.0% [99.6, 100.0] | 99.3% [98.7, 99.9] | 99.4% [98.9, 99.9] |
+| Training conditions (wind up to 8 m/s, mass and gravity varied) | 100.0% [99.6, 100.0] | 70.5% [59.1, 82.0] | 98.3% [97.1, 99.6] |
+| **Unseen wind (10–15 m/s, gusts 3–5 m/s)** | **92.1% [90.3, 93.6]** | **76.1% [66.9, 85.2]** | **74.6% [63.2, 86.1]** |
+
+In unseen wind the randomised DQN differs from the calm DQN by −1.4 points [−15.1, +12.2] and from the PID by −17.5 points [−28.9, −6.0].
+
+![Landing success by controller and scenario](figures/success_by_scenario.png)
+
+- **Wind strength:** the two DQNs behave alike at every wind level, and the PID is ahead from 10 to 17.5 m/s.
+- **What randomisation did help:** robustness to mass. With mass alone varied, the calm DQN lands 70.9% and the randomised DQN 98.6%.
+- **Randomisation range:** agents trained on wind up to 12 and 16 m/s land 92.1% [88.6, 95.6] and 94.7% [92.9, 96.6] in the same test. Their training wind overlaps the test wind, so for them it is no longer unseen.
+
+![Landing success against wind strength](figures/success_vs_wind.png)
+
+![Success in unseen wind against randomisation range](figures/success_vs_range.png)
 
 ## Limitations and future work
 
 - The model is 2-D and rigid: there is no out-of-plane motion, fuel slosh, structural flexing or engine gimbal dynamics, and all physical parameters are synthetic rather than taken from a real vehicle.
+- Training varies a lot between seeds (40.9% to 93.2% in unseen wind for the randomised DQN), and each agent is its best checkpoint on its own training scenario. Seeds 5–9 were added, and the training gravity range was narrowed, after earlier results had been seen; details are in [THEORY.md](THEORY.md).
+- Wind exerts no torque on the rocket in this model, which makes gusts easier than in reality.
+- The PID has integral memory and the DQN does not, which may explain part of the gap; this was not tested.
 - Actions are discrete (engines on or off), whereas real landing engines throttle continuously.
 - Results are from simulation only; a policy that is robust here is not proven robust on hardware.
 - Planned extension: noisy sensors with a Kalman filter that estimates the state before it is passed to the agent.
